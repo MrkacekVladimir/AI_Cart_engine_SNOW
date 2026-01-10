@@ -76,8 +76,8 @@ class Car_manager():
             if self.cars_to_next_accumulator >= 1.0:
                 cars_to_remove = int(self.cars_to_next_accumulator)
                 new_cars_to_next = self.cars_to_next - cars_to_remove
-                # Ensure at least 5 cars go to next generation (minimum for diversity)
-                new_cars_to_next = max(5, new_cars_to_next)
+                # Ensure at least 10 cars go to next generation (minimum for diversity)
+                new_cars_to_next = max(10, new_cars_to_next)
                 
                 if new_cars_to_next != self.cars_to_next:
                     print(f"  Elite count decay: {self.cars_to_next} → {new_cars_to_next} (accumulated {self.cars_to_next_accumulator:.2f})")

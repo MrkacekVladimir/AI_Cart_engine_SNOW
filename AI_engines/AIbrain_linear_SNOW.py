@@ -38,6 +38,10 @@ class AIbrain_linear_SNOW:
         # Average speed tracking
         self.speed_samples = []  # Collect all speed samples during episode
         self.average_speed = 0.0  # Calculated at end of episode
+        
+        # Enhanced input features tracking
+        self.prev_speed = 0.0  # For speed delta calculation
+        self.prev_steering = 0.5  # For steering momentum (0=left, 1=right, 0.5=straight)
 
         self.init_param()
 
@@ -110,8 +114,8 @@ class AIbrain_linear_SNOW:
         # parametry modely vzdy inicializovat v této metode
         
         self.model_net = NeuralNetwork(
-            layer_sizes=[10, 5, 2],
-            activations=['relu', 'sigmoid'],
+            layer_sizes=[15, 10, 4, 2],
+            activations=['relu', 'relu', 'sigmoid'],
             loss='mse'
         )
 
@@ -142,34 +146,112 @@ class AIbrain_linear_SNOW:
         # vždy uložit!
         self.store()
 
+    # def decide(self, data):
+    #     self.decider += 1
+    #     x = np.asarray(data + [self.speed / 500], dtype=float).ravel()
+    #
+    #     # n_w = self.W.shape[1]
+    #     # if x.size < n_w:
+    #     #     x = np.concatenate([x, np.zeros(n_w - x.size)])
+    #     # elif x.size > n_w:
+    #     #     x = x[:n_w]
+    #
+    #     z = self.model_net.predict(x)[0]
+    #
+    #     acc_dec = z[0]
+    #     break_dec = 1 - acc_dec
+    #     left_dec = z[1]
+    #     right_dec = 1 - left_dec
+    #
+    #     # Override speed control if below minimum threshold
+    #     # Force acceleration to prevent getting stuck
+    #     # if self.speed < self.min_speed_threshold:
+    #     #     acc_dec = 1.0   # Full acceleration
+    #     #     break_dec = 0.0  # No braking
+    #     #     # Keep left_dec and right_dec as-is (AI can still steer)
+    #
+    #     # lineární kombinace pro každou akci: W @ x + b
+    #     # z = self.W.dot(x) + self.b
+    #
+    #     # vracíme přímo z; AI_car pak dělá threshold > 0.5
+    #     return np.array([acc_dec, break_dec, left_dec, right_dec])
+
     def decide(self, data):
+        """
+        Enhanced decision function with additional high-impact input features.
+        
+        Input features (15 total):
+          - 9 raycast distances (obstacle detection)
+          - 1 normalized speed (current velocity)
+          - 1 speed delta (acceleration/deceleration)
+          - 1 min distance (closest obstacle)
+          - 1 safety ratio (speed relative to clearance)
+          - 1 clearance bias (left vs right space)
+          - 1 previous steering (steering momentum)
+        
+        Network should be: [15, 16, 2] or larger
+        """
         self.decider += 1
-        x = np.asarray(data + [self.speed / 500], dtype=float).ravel()
-
-        # n_w = self.W.shape[1]
-        # if x.size < n_w:
-        #     x = np.concatenate([x, np.zeros(n_w - x.size)])
-        # elif x.size > n_w:
-        #     x = x[:n_w]
-
+        
+        # Constants
+        MAX_SPEED = 500.0
+        EPSILON = 0.01  # Small value to avoid division by zero
+        
+        # === FEATURE 1: Normalized Speed ===
+        speed_normalized = self.speed / MAX_SPEED
+        
+        # === FEATURE 2: Speed Delta (Acceleration Context) ===
+        # Tells network if accelerating (+) or decelerating (-)
+        speed_delta = (self.speed - self.prev_speed) / MAX_SPEED
+        self.prev_speed = self.speed
+        
+        # === FEATURE 3: Min Distance (Danger Awareness) ===
+        # Explicit signal for closest obstacle
+        if len(data) > 0:
+            min_distance = min(data)
+        else:
+            min_distance = 1.0  # Far away if no data
+        
+        # === FEATURE 4: Safety Ratio (Speed + Distance Context) ===
+        # High value = safe (slow or far from obstacles)
+        # Low value = danger (fast and close to obstacles)
+        safety_ratio = min_distance / (speed_normalized + EPSILON)
+        # Clamp to reasonable range [0, 10]
+        safety_ratio = min(10.0, max(0.0, safety_ratio))
+        
+        # === FEATURE 5: Clearance Bias (Left vs Right Space) ===
+        # Positive = more space on right, Negative = more space on left
+        if len(data) >= 9:
+            left_clearance = np.mean(data[0:4])   # Left sensors (indices 0-3)
+            right_clearance = np.mean(data[5:9])  # Right sensors (indices 5-8)
+            clearance_bias = right_clearance - left_clearance
+        else:
+            clearance_bias = 0.0
+        
+        # === FEATURE 6: Previous Steering (Steering Momentum) ===
+        # Helps network maintain smooth steering
+        prev_steering_normalized = self.prev_steering
+        
+        # === Build Input Vector ===
+        # Order: 9 raycasts + speed + speed_delta + min_dist + safety + clearance + prev_steer
+        x = np.asarray(
+            data + 
+            [speed_normalized, speed_delta, min_distance, safety_ratio, clearance_bias, prev_steering_normalized],
+            dtype=float
+        ).ravel()
+        
+        # === Network Prediction ===
         z = self.model_net.predict(x)[0]
-
+        
         acc_dec = z[0]
         break_dec = 1 - acc_dec
         left_dec = z[1]
         right_dec = 1 - left_dec
-
-        # Override speed control if below minimum threshold
-        # Force acceleration to prevent getting stuck
-        if self.speed < self.min_speed_threshold:
-            acc_dec = 1.0   # Full acceleration
-            break_dec = 0.0  # No braking
-            # Keep left_dec and right_dec as-is (AI can still steer)
-
-        # lineární kombinace pro každou akci: W @ x + b
-        # z = self.W.dot(x) + self.b
-
-        # vracíme přímo z; AI_car pak dělá threshold > 0.5
+        
+        # Update steering history for next iteration
+        self.prev_steering = left_dec
+        
+        # === Return Decision ===
         return np.array([acc_dec, break_dec, left_dec, right_dec])
 
     def mutate_weights_gaussian(self, weights, mutation_rate, mutation_std):
@@ -277,18 +359,24 @@ class AIbrain_linear_SNOW:
 
 
     def calculate_score(self, distance, time, no):
-        # Base score is distance traveled
-        self.score = distance
-        
         # Calculate average speed over the episode
         if len(self.speed_samples) > 0:
             self.average_speed = np.mean(self.speed_samples)
         else:
             self.average_speed = 0.0
         
+        # Score formula: distance is PRIMARY, speed is secondary bonus
+        # Reduced speed weight from 0.5 to 0.1 so distance is prioritized
+        MAX_SPEED = 500.0
+        speed_bonus = (self.average_speed / MAX_SPEED) * distance * 0.5
+        # speed_penalty = self.speed_penalty * distance * 0.01  # Scale penalty to be significant
+        self.score = distance + speed_bonus
+        # self.score = distance
+
+
         # Apply penalty for being too slow
         # Penalize heavily for spending time below minimum speed
-        self.score -= self.speed_penalty * 100  # Scale penalty to be significant
+
 
 
     ##################### do těchto funkcí není potřeba zasahovat:
