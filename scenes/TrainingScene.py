@@ -100,26 +100,26 @@ class Training:
         self.text_inputs = [
             TextInput(
             pygame.Rect(WIDTH - MAP_MENUSIZE + MAP_BUTTON_IDENT, 5+TILESIZE*0, MAP_BUTTON_WIDTH, int(MAP_BUTTON_HEIGHT * 0.7)),
-            self.font_textinput, "pocet_aut"),
+            self.font_textinput, "pocet_aut", "100"),
             TextInput(
                 pygame.Rect(WIDTH - MAP_MENUSIZE + MAP_BUTTON_IDENT, 5+TILESIZE*0.5, MAP_BUTTON_WIDTH, int(MAP_BUTTON_HEIGHT * 0.7)),
-                self.font_textinput, "pocet_generaci"),
+                self.font_textinput, "pocet_generaci", "10"),
             TextInput(
                 pygame.Rect(WIDTH - MAP_MENUSIZE + MAP_BUTTON_IDENT, 5 + TILESIZE * 1, MAP_BUTTON_WIDTH,
                             int(MAP_BUTTON_HEIGHT * 0.7)),
-                self.font_textinput, "cars_to_next"),
+                self.font_textinput, "cars_to_next", "20"),
             TextInput(
                 pygame.Rect(WIDTH - MAP_MENUSIZE + MAP_BUTTON_IDENT, 5 + TILESIZE * 1.5, MAP_BUTTON_WIDTH,
                             int(MAP_BUTTON_HEIGHT * 0.7)),
-                self.font_textinput, "save_as"),
+                self.font_textinput, "save_as", "my_save.npz"),
             TextInput(
                 pygame.Rect(WIDTH - MAP_MENUSIZE + MAP_BUTTON_IDENT, 5 + TILESIZE * 2, MAP_BUTTON_WIDTH,
                             int(MAP_BUTTON_HEIGHT * 0.7)),
-                self.font_textinput, "max_time"),
+                self.font_textinput, "max_time", "5"),
             TextInput(
                 pygame.Rect(WIDTH - MAP_MENUSIZE + MAP_BUTTON_IDENT, 5 + TILESIZE * 8, MAP_BUTTON_WIDTH,
                             int(MAP_BUTTON_HEIGHT * 0.7)),
-                self.font_textinput, "load_from"),
+                self.font_textinput, "load_from", "my_save.npz"),
         ]
 
 

@@ -1,10 +1,10 @@
 import pygame
 
 class TextInput:
-    def __init__(self, rect, font, placeholder=""):
+    def __init__(self, rect, font, placeholder="", defaultText=""):
         self.rect = pygame.Rect(rect)
         self.font = font
-        self.text = ""
+        self.text = defaultText
         self.placeholder = placeholder
         self.focused = False
         self.caret_pos = 0  # index v textu
