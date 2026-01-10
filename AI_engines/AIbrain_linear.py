@@ -18,13 +18,16 @@ class AIbrain_linear:
         self.x = 0 # sem se ulozí souradnice x, max HEIGHT*1.3
         self.y = 0 # sem se ulozí souradnice y, max HEIGHT (800)
         self.speed = 0 # sem se ukládá souradnice, max MAXSPEED ( 500)
+        self.eps = 1.0
+        self.mut_cnt = 0
+        self.epoch_n = 100
 
         self.init_param()
 
     def init_param(self):
         # zde si vytvoríme promnenne co potrebujeme pro nas model
         # parametry modely vzdy inicializovat v této metode
-        self.W = (np_random.rand(N_ACTIONS, N_INPUTS) - 0.5) / N_INPUTS
+        self.W = (np_random.rand(N_ACTIONS, N_INPUTS + 1) - 0.5) / (N_INPUTS + 1)
         self.b = (np_random.rand(N_ACTIONS) - 0.5)
 
         self.NAME = "SAFR_linear"
@@ -34,8 +37,7 @@ class AIbrain_linear:
 
     def decide(self, data):
         self.decider += 1
-
-        x = np.asarray(data, dtype=float).ravel()
+        x = np.asarray(data + [self.speed / 500], dtype=float).ravel()
 
         n_w = self.W.shape[1]
         if x.size < n_w:
@@ -64,6 +66,8 @@ class AIbrain_linear:
         self.NAME += "_MUT_" + ''.join(random.choices(self.chars, k=3))
 
         self.store()
+        self.mut_cnt += 1
+        self.eps = self.eps * 0.99
 
     def store(self):
         # vše, co se má ukládat do .npz
@@ -88,7 +92,7 @@ class AIbrain_linear:
 
 
     def calculate_score(self, distance, time, no):
-        self.score = distance
+        self.score = self.eps * distance + (1 - self.eps) * time
 
     ##################### do těchto funkcí není potřeba zasahovat:
     def passcardata(self, x, y, speed):

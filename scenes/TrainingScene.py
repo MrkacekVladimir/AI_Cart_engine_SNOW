@@ -63,6 +63,14 @@ class loadbutton:
                 self.training_scene.input_data[input.placeholder] = input.get_int(10)
             elif input.placeholder == "cars_to_next":
                 self.training_scene.input_data[input.placeholder] = input.get_int(10)
+            elif input.placeholder == "checkpoint_every":
+                self.training_scene.input_data[input.placeholder] = input.get_int(0)
+            elif input.placeholder == "cars_to_next_decay":
+                # Parse as float for decay parameter
+                try:
+                    self.training_scene.input_data[input.placeholder] = float(input.text) if input.text else 1.0
+                except ValueError:
+                    self.training_scene.input_data[input.placeholder] = 1.0
             elif input.placeholder == "save_as":
                 self.training_scene.input_data[input.placeholder] = input.get_text("userbrain.npz")
             elif input.placeholder == "load_from":
@@ -94,7 +102,7 @@ class Training:
         self.font_textinput = pygame.font.SysFont(None, int(MAP_BUTTON_FONTSIZE * 0.75))
 
         # inputy
-        self.input_data = {"pocet_aut": 10, "pocet_generaci": 3, "max_time": 5, "cars_to_next":3, "save_as":"usersave.npz","load_from": "userbrain.npz"}
+        self.input_data = {"pocet_aut": 10, "pocet_generaci": 3, "max_time": 5, "cars_to_next":3, "save_as":"usersave.npz","load_from": "userbrain.npz", "checkpoint_every": 0, "cars_to_next_decay": 1.0}
         self.cars_manager = Car_manager(**self.input_data)
 
         self.text_inputs = [
@@ -116,6 +124,14 @@ class Training:
                 pygame.Rect(WIDTH - MAP_MENUSIZE + MAP_BUTTON_IDENT, 5 + TILESIZE * 2, MAP_BUTTON_WIDTH,
                             int(MAP_BUTTON_HEIGHT * 0.7)),
                 self.font_textinput, "max_time", "5"),
+            TextInput(
+                pygame.Rect(WIDTH - MAP_MENUSIZE + MAP_BUTTON_IDENT, 5 + TILESIZE * 2.5, MAP_BUTTON_WIDTH,
+                            int(MAP_BUTTON_HEIGHT * 0.7)),
+                self.font_textinput, "checkpoint_every", "0"),
+            TextInput(
+                pygame.Rect(WIDTH - MAP_MENUSIZE + MAP_BUTTON_IDENT, 5 + TILESIZE * 3, MAP_BUTTON_WIDTH,
+                            int(MAP_BUTTON_HEIGHT * 0.7)),
+                self.font_textinput, "cars_to_next_decay", "1.0"),
             TextInput(
                 pygame.Rect(WIDTH - MAP_MENUSIZE + MAP_BUTTON_IDENT, 5 + TILESIZE * 8, MAP_BUTTON_WIDTH,
                             int(MAP_BUTTON_HEIGHT * 0.7)),

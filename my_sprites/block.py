@@ -52,13 +52,13 @@ class Blocks(pygame.sprite.Sprite):
                 for side in sides:
                     block = None
                     if side == "T":
-                        block = BlockH(x, y, alpha=self.alpha)                    # horní hrana
+                        block = BlockH(x, y, alpha=self.alpha)  # horní hrana
                     elif side == "B":
-                        block = BlockH(x, y + self.tile_size, alpha=self.alpha)   # spodní hrana
+                        block = BlockH(x, y + self.tile_size - 1, alpha=self.alpha)  # spodní hrana
                     elif side == "L":
-                        block = BlockV(x, y, alpha=self.alpha)                    # levá hrana
+                        block = BlockV(x, y, alpha=self.alpha)  # levá hrana
                     elif side == "R":
-                        block = BlockV(x + self.tile_size, y, alpha=self.alpha)   # pravá hrana
+                        block = BlockV(x + self.tile_size - 1, y, alpha=self.alpha)  # pravá hrana
 
                     if block is not None:
                         self.sprites.add(block)
