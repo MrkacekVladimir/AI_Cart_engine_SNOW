@@ -125,7 +125,42 @@ Stačí upravit logiku v init_param, decide a mutate podle vašich nápadů a za
 
    python main.py
 
-Po spuštění se objeví hlavní menu.
+   Pro rychlejší trénink bez zobrazování (headless mode):
+
+   python main.py --headless
+
+   V headless módu se vykreslování vynechává a simulace běží bez omezení FPS, 
+   což výrazně urychluje trénink. Grafické rozhraní se nezobrazí a trénink se 
+   spustí automaticky s výchozími parametry.
+
+   Pro pokročilé použití v headless módu můžete nastavit parametry přímo:
+
+   python main.py --headless --map DefaultRace --pocet_aut 100 --pocet_generaci 10 --max_time 5 --cars_to_next 20 --save_as mybrain.npz
+
+   Parametry:
+   - --map: Název mapy (např. DefaultRace, DefaultReset, nebo vlastní mapa)
+   - --pocet_aut: Počet aut na generaci (výchozí: 100)
+   - --pocet_generaci: Počet generací (výchozí: 10)
+   - --max_time: Maximální čas jedné epochy v sekundách (výchozí: 5)
+   - --cars_to_next: Počet elitních aut pro další generaci (výchozí: 20)
+   - --save_as: Název souboru pro uložení nejlepšího mozku (výchozí: userbrain.npz)
+   - --load_from: Volitelně - načíst existující mozek pro pokračování tréninku
+   - --speed: Násobek rychlosti simulace v headless módu (výchozí: 100.0, např. 100.0 = 100x rychleji, 1000.0 = 1000x rychleji)
+
+   Příklad s načtením existujícího mozku:
+   python main.py --headless --map DefaultRace --pocet_aut 100 --pocet_generaci 20 --load_from mybrain.npz --save_as mybrain_continued.npz
+
+   Příklad s 10x rychlejší simulací:
+   python main.py --headless --map DefaultRace --pocet_aut 100 --pocet_generaci 10 --speed 10
+
+   Poznámka: Parametr --speed určuje, kolikrát rychleji probíhá simulace než v reálném čase. 
+   Simulace je rozdělena do stabilních kroků pro zachování přesnosti fyziky. Vyšší hodnoty 
+   znamenají rychlejší simulaci, ale spotřebují více CPU. Výchozí hodnota je 100.0 (100x rychleji).
+   Pro maximální rychlost můžete použít --speed 1000 nebo vyšší (např. --speed 10000).
+
+   Po dokončení tréninku se program automaticky ukončí.
+
+Po spuštění se objeví hlavní menu (pokud nepoužíváte --headless).
 
 ------------------------------------------------------------
 5. Ovládání menu a herní módy
