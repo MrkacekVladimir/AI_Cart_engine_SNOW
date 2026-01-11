@@ -1,13 +1,211 @@
 import os
+import time
 
 import pygame
-from my_sprites.AI_car import AI_car
-from constants import WHITE, SPEED, MAX_SPEED, TILESIZE, TURN_SPEED, BREAK_SPEED, FRICTION_SPEED,PATH_SAVES
+from my_sprites.AI_car import AI_car, HeadlessCar
+from constants import WHITE, SPEED, MAX_SPEED, TILESIZE, TURN_SPEED, BREAK_SPEED, FRICTION_SPEED, PATH_SAVES
 import copy
 from pathlib import Path
 import numpy as np
 
 SPAWN_Y_JITTER_PX = 12
+
+
+class HeadlessCarManager:
+    """
+    Car manager for headless training mode.
+    No sprites, no rendering - just pure simulation.
+    """
+    
+    def __init__(self, pocet_aut, pocet_generaci, max_ticks, cars_to_next, save_as, load_from):
+        self.pocet_aut = pocet_aut
+        self.pocet_generaci = pocet_generaci
+        self.max_ticks = max_ticks  # Frame count per generation
+        self.cars_to_next = cars_to_next
+        self.save_as = save_as
+        self.load_from = load_from
+        
+        self.cur_epoch = 0
+        self.tick_count = 0  # Current tick in generation
+        self.running = False
+        self.pustene = False
+        
+        self.car_list = []
+        self.best_cars_list = []
+        self.defaultbrain = None
+        self.brain_list = []
+    
+    def add_defaultbrain(self, brain):
+        self.defaultbrain = brain
+        self.reset_brains()
+    
+    def reset_brains(self):
+        self.brain_list = [self.defaultbrain() for _ in range(self.pocet_aut)]
+    
+    def start(self):
+        """Start training from scratch."""
+        self.car_list = []
+        self.cur_epoch = 0
+        self.tick_count = 0
+        
+        base_x = TILESIZE * 4 + int(TILESIZE / 2)
+        base_y = TILESIZE * 8 + int(TILESIZE / 2)
+        
+        for i in range(self.pocet_aut):
+            y = base_y + int(np.random.randint(-SPAWN_Y_JITTER_PX, SPAWN_Y_JITTER_PX + 1))
+            c = HeadlessCar(base_x, y, 10, 20, self.brain_list[i], 180 + np.random.randint(-45, +45))
+            self.car_list.append(c)
+        
+        self.running = True
+        self.pustene = True
+    
+    def load(self, file="userbrain.npz"):
+        """Load parameters and start training."""
+        self.running = False
+        params = np.load(Path(PATH_SAVES + file))
+        self.reset_brains()
+        
+        self.car_list = []
+        self.cur_epoch = 0
+        self.tick_count = 0
+        
+        base_x = TILESIZE * 4 + int(TILESIZE / 2)
+        base_y = TILESIZE * 8 + int(TILESIZE / 2)
+        
+        for i in range(self.pocet_aut):
+            y = base_y + int(np.random.randint(-SPAWN_Y_JITTER_PX, SPAWN_Y_JITTER_PX + 1))
+            c = HeadlessCar(base_x, y, 10, 20, self.brain_list[i], 180 + np.random.randint(-45, +45))
+            c.brain.set_parameters(params)
+            if i > 0:
+                c.brain.mutate()
+            self.car_list.append(c)
+        
+        self.running = True
+        self.pustene = True
+    
+    def setup_next_epoch(self):
+        """Setup the next generation."""
+        self.score_cars()
+        self.best_cars_list = self.best_cars_list[:self.cars_to_next]
+        
+        self.car_list = []
+        self.reset_brains()
+        self.tick_count = 0
+        self.cur_epoch += 1
+        
+        base_x = TILESIZE * 4 + int(TILESIZE / 2)
+        base_y = TILESIZE * 8 + int(TILESIZE / 2)
+        
+        # Keep best cars
+        for i in range(self.cars_to_next):
+            y = base_y + int(np.random.randint(-SPAWN_Y_JITTER_PX, SPAWN_Y_JITTER_PX + 1))
+            c = HeadlessCar(base_x, y, 10, 20,
+                           copy.deepcopy(self.best_cars_list[i].brain),
+                           180 + np.random.randint(-45, +45))
+            self.car_list.append(c)
+        
+        # Fill with mutated versions
+        for j in range(self.pocet_aut - self.cars_to_next):
+            i = j % self.cars_to_next
+            c = HeadlessCar(TILESIZE * 4 + int(TILESIZE / 2),
+                           TILESIZE * 8 + int(TILESIZE / 2),
+                           10, 20,
+                           copy.deepcopy(self.best_cars_list[i].brain))
+            c.brain.mutate()
+            self.car_list.append(c)
+        
+        self.running = True
+    
+    def score_cars(self):
+        self.best_cars_list = sorted(self.car_list, key=lambda obj: obj.brain.score, reverse=True)
+    
+    def update_step(self, dt, blocks):
+        """
+        Single update step for all cars (headless - no sprites).
+        Returns True if epoch is still running, False if epoch ended.
+        """
+        if not self.running:
+            return False
+        
+        for c in self.car_list:
+            if c.running:
+                c.update(dt, blocks)
+                # Check collision using mask
+                if c.check_collision(blocks):
+                    c.running = False
+        
+        self.tick_count += 1
+        
+        # Check for epoch end (tick-based)
+        if self.tick_count >= self.max_ticks:
+            self.running = False
+            return False
+        
+        return True
+    
+    def autosave(self):
+        self.save(self.save_as)
+    
+    def save(self, file):
+        self.score_cars()
+        np.savez(Path(PATH_SAVES + file), **self.best_cars_list[0].brain.get_parameters())
+    
+    def get_best_score(self):
+        """Get the current best score."""
+        if self.car_list:
+            return max(c.brain.score for c in self.car_list)
+        return 0.0
+    
+    def get_avg_score(self):
+        """Get average score of all cars."""
+        if self.car_list:
+            return sum(c.brain.score for c in self.car_list) / len(self.car_list)
+        return 0.0
+    
+    def get_running_count(self):
+        """Get count of cars still running."""
+        return sum(1 for c in self.car_list if c.running)
+    
+    def run_training(self, blocks, dt=1/60, callback=None):
+        """
+        Run complete training loop (headless).
+        
+        Args:
+            blocks: Blocks object with collision mask
+            dt: Fixed timestep (default 1/60s for ~60fps equivalent)
+            callback: Optional callback(epoch, best_score, avg_score, ticks, time_elapsed)
+        """
+        start_time = time.time()
+        
+        for epoch in range(self.pocet_generaci):
+            epoch_start = time.time()
+            
+            # Run one epoch
+            while self.running:
+                self.update_step(dt, blocks)
+            
+            epoch_time = time.time() - epoch_start
+            
+            # Report progress
+            if callback:
+                callback(
+                    epoch + 1,
+                    self.get_best_score(),
+                    self.get_avg_score(),
+                    self.tick_count,
+                    epoch_time
+                )
+            
+            # Setup next epoch if not done
+            if epoch < self.pocet_generaci - 1:
+                self.setup_next_epoch()
+        
+        # Final save
+        self.autosave()
+        self.pustene = False
+        
+        total_time = time.time() - start_time
+        return total_time
 
 class Car_manager():
     def __init__(self, pocet_aut, pocet_generaci, max_time, cars_to_next,save_as, load_from):

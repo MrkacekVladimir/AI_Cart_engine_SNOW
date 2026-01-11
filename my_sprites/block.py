@@ -49,16 +49,17 @@ class Blocks(pygame.sprite.Sprite):
                 x = j * self.tile_size
                 y = i * self.tile_size
 
+
                 for side in sides:
                     block = None
                     if side == "T":
                         block = BlockH(x, y, alpha=self.alpha)                    # horní hrana
                     elif side == "B":
-                        block = BlockH(x, y + self.tile_size, alpha=self.alpha)   # spodní hrana
+                        block = BlockH(x, y + self.tile_size-1, alpha=self.alpha)   # spodní hrana
                     elif side == "L":
                         block = BlockV(x, y, alpha=self.alpha)                    # levá hrana
                     elif side == "R":
-                        block = BlockV(x + self.tile_size, y, alpha=self.alpha)   # pravá hrana
+                        block = BlockV(x + self.tile_size-1, y, alpha=self.alpha)   # pravá hrana
 
                     if block is not None:
                         self.sprites.add(block)
@@ -66,6 +67,43 @@ class Blocks(pygame.sprite.Sprite):
                         self.image.blit(block.image, block.rect)
 
         # vytvoření masky pro raycasting
+        self.mask = pygame.mask.from_surface(self.image, 1)
+
+    def construct_mask_only(self):
+        """
+        Create only the collision mask without sprite objects.
+        Used for headless training mode - much faster than constructBG().
+        """
+        self.image.fill((0, 0, 0, 0))
+        
+        for i in range(len(self.tilegrid)):
+            for j in range(len(self.tilegrid[i])):
+                onetile = self.tilegrid[i][j]
+                sides = self.tilesides[onetile]
+                
+                x = j * self.tile_size
+                y = i * self.tile_size
+                
+                # Draw directly to surface without creating sprite objects
+                for side in sides:
+                    if side == "T":
+                        # Top edge - horizontal line
+                        pygame.draw.rect(self.image, (255, 255, 255, 255), 
+                                        (x, y, self.tile_size, 1))
+                    elif side == "B":
+                        # Bottom edge - horizontal line
+                        pygame.draw.rect(self.image, (255, 255, 255, 255),
+                                        (x, y + self.tile_size - 1, self.tile_size, 1))
+                    elif side == "L":
+                        # Left edge - vertical line
+                        pygame.draw.rect(self.image, (255, 255, 255, 255),
+                                        (x, y, 1, self.tile_size))
+                    elif side == "R":
+                        # Right edge - vertical line
+                        pygame.draw.rect(self.image, (255, 255, 255, 255),
+                                        (x + self.tile_size - 1, y, 1, self.tile_size))
+        
+        # Create mask from the surface
         self.mask = pygame.mask.from_surface(self.image, 1)
 
     def draw(self, screen):

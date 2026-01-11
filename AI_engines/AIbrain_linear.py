@@ -87,8 +87,8 @@ class AIbrain_linear:
         self.NAME = str(self.parameters["NAME"])
 
 
-    def calculate_score(self, distance, time, no):
-        self.score = distance
+    def calculate_score(self, distance, time, finish_order):
+        self.score = distance + distance / time + finish_order
 
     ##################### do těchto funkcí není potřeba zasahovat:
     def passcardata(self, x, y, speed):

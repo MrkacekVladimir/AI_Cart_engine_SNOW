@@ -1,0 +1,92 @@
+---
+alwaysApply: true
+---
+
+# AI Brain Interface for Racing Game
+
+When creating or modifying AI brain models for this racing game, always follow these input/output specifications.
+
+## INPUT: Raycasting System (9 rays)
+
+The AI brain receives **9 float values** representing distances to obstacles measured in **tiles** (not pixels).
+
+### Ray Angles (relative to car's heading direction)
+
+```
+Index | Angle | Direction
+------|-------|--------------------
+  0   |  -90° | Perpendicular LEFT
+  1   |  -45° | Diagonal LEFT
+  2   |  -20° | Slight LEFT
+  3   |   -5° | Almost forward, tiny LEFT
+  4   |    0° | STRAIGHT AHEAD
+  5   |   +5° | Almost forward, tiny RIGHT
+  6   |  +20° | Slight RIGHT
+  7   |  +45° | Diagonal RIGHT
+  8   |  +90° | Perpendicular RIGHT
+```
+
+### Input Characteristics
+
+- **Data type**: List/array of 9 floats
+- **Unit**: Distance in tiles (1 tile = 80 pixels at default HEIGHT=800)
+- **Range**: 0.0 to ~14.0 tiles (map diagonal if no obstacle hit)
+- **Low values** = obstacle is CLOSE (danger!)
+- **High values** = clear path ahead
+
+## OUTPUT: 4 Action Values
+
+The `decide(data)` method must return **4 numeric values**. The game applies threshold `> 0.5` to determine actions.
+
+```
+Index | Action      | Effect when > 0.5
+------|-------------|----------------------------------
+  0   | ACCELERATE  | Increase speed (gas pedal)
+  1   | BRAKE       | Decrease speed (can't go negative)
+  2   | TURN LEFT   | Rotate car counter-clockwise
+  3   | TURN RIGHT  | Rotate car clockwise
+```
+
+### Output Characteristics
+
+- **Return type**: Array/list of 4 numeric values
+- **Threshold**: Values > 0.5 activate the action
+- **Turning only works** when speed > 0
+- **Multiple actions** can be active simultaneously (e.g., accelerate + turn)
+
+## Additional Car Data (via `passcardata`)
+
+The game calls `passcardata(x, y, speed)` each frame with:
+
+- `x`: Car X position (0 to ~1040 pixels)
+- `y`: Car Y position (0 to 800 pixels)
+- `speed`: Current speed (0 to MAX_SPEED=500)
+
+## Required Brain Methods
+
+```python
+class AIbrain_YourTeam:
+    def __init__(self): ...
+    def init_param(self): ...           # Initialize model parameters, set self.NAME
+    def decide(self, data) -> [4 values]: ...  # 9 inputs → 4 outputs
+    def mutate(self): ...               # Random parameter perturbation
+    def store(self): ...                # Save params to self.parameters dict
+    def get_parameters(self): ...       # Return copy of self.parameters
+    def set_parameters(self, params): ... # Load parameters from dict/npz
+    def calculate_score(self, distance, time, no): ... # Update self.score
+    def passcardata(self, x, y, speed): ... # Receive car state
+    def getscore(self): ...             # Return self.score
+```
+
+## Example Neural Network Architecture
+
+For a simple linear model:
+
+- Input layer: 9 neurons (ray distances)
+- Output layer: 4 neurons (actions)
+- Formula: `output = W @ input + b` where W is (4, 9) matrix
+
+For a hidden layer model:
+
+- Input: 9 → Hidden: N → Output: 4
+- Use ReLU or other activations between layers

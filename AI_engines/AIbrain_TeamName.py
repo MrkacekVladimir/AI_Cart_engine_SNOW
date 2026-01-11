@@ -14,33 +14,56 @@ class AIbrain_TeamName:
         self.init_param()
 
     def init_param(self):
-        self.w1 = np_random.rand(4)
-        self.w2 = np_random.rand(4)
-        self.NAME ="Safr_"+''.join(random.choices(self.chars, k=5))
+        self.hidden_size = 64  # tunable
+        
+        # Layer 1: 9 inputs -> 16 hidden
+        self.W1 = (np.random.rand(self.hidden_size, 9) - 0.5) / 9
+        self.b1 = (np.random.rand(self.hidden_size) - 0.5)
+        
+        # Layer 2: 16 hidden -> 4 outputs
+        self.W2 = (np.random.rand(4, self.hidden_size) - 0.5) / self.hidden_size
+        self.b2 = (np.random.rand(4) - 0.5)
+        
+        self.NAME ="Vlad_"+''.join(random.choices(self.chars, k=5))
         self.store()
+
+    def decide(self, data):
+        x = np.asarray(data, dtype=float)
+        
+        # Hidden layer with ReLU
+        h = np.maximum(0, self.W1.dot(x) + self.b1)
+        
+        # Output layer
+        z = self.W2.dot(h) + self.b2
+        return z
+
+    # def decide(self, data):
+    #     self.decider += 1
+    #     if np.round(self.decider) % 2 == 1:
+    #         return np.round(self.w1)
+    #     else:
+    #         return np.round(self.w2)
 
     def store(self):
         self.parameters = copy.deepcopy({
-            'w1': self.w1,
-            'w2': self.w2,
+            'W1': self.W1,
+            'b1': self.b1,
+            'W2': self.W2,
+            'b2': self.b2,
             "NAME": self.NAME,
         })
 
-    def decide(self, data):
-        self.decider += 1
-        if np.round(self.decider) % 2 == 1:
-            return np.round(self.w1)
-        else:
-            return np.round(self.w2)
 
     def mutate(self):
-        if np_random.rand(1) < 0.5:
-            self.w1 = np.array([float(i+  (np.round(np_random.rand(1))-0.5)/4) for i in self.w1])
-            self.NAME += "_MUT_W1_"+''.join(random.choices(self.chars, k=3))
-        else:
-            self.w2 = np.array([float(i+  (np.round(np_random.rand(1))-0.5)/4) for i in self.w2])
-            self.NAME += "_MUT_W2_"+''.join(random.choices(self.chars, k=3))
-
+        mutation_strength = 0.2  # Smaller for more params
+        
+        # Mutate all 4 parameter arrays
+        self.W1 += (np.random.rand(*self.W1.shape) - 0.5) * mutation_strength
+        self.b1 += (np.random.rand(*self.b1.shape) - 0.5) * mutation_strength
+        self.W2 += (np.random.rand(*self.W2.shape) - 0.5) * mutation_strength
+        self.b2 += (np.random.rand(*self.b2.shape) - 0.5) * mutation_strength
+        
+        self.NAME += "_MUT_" + ''.join(random.choices(self.chars, k=3))
         self.store()
 
     def calculate_score(self, distance, time, no):
