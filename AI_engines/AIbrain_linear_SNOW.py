@@ -476,17 +476,23 @@ class AIbrain_linear_SNOW:
         else:
             self.average_speed = 0.0
         
-        # Score formula: distance is PRIMARY, speed is secondary bonus
-        # Reduced speed weight from 0.5 to 0.1 so distance is prioritized
+        # Score formula: distance is PRIMARY, speed and time are secondary bonuses
         MAX_SPEED = 500.0
+        
+        # Speed bonus: rewards higher average speed
         speed_bonus = (self.average_speed / MAX_SPEED) * distance * 0.5
-        # speed_penalty = self.speed_penalty * distance * 0.01  # Scale penalty to be significant
-        self.score = distance + speed_bonus
-        # self.score = distance
-
-
-        # Apply penalty for being too slow
-        # Penalize heavily for spending time below minimum speed
+        
+        # Time bonus: rewards faster completion (less time = higher bonus)
+        # For same distance, lower time gets higher score
+        # time_bonus = distance / (time + 1) scales with distance but inversely with time
+        # Multiplier 10.0 controls the strength of the time bonus
+        if time > 0:
+            time_bonus = (distance / (time + 1.0)) * 10.0
+        else:
+            time_bonus = 0.0
+        
+        # Final score: distance (primary) + speed bonus + time bonus
+        self.score = distance + speed_bonus + time_bonus
 
 
 
